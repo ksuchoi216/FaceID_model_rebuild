@@ -1,0 +1,24 @@
+{
+  "path_for_saving_model": "./data/face-extraction-model.pt",
+  "data":{
+    "data_path": "./data/photos_cropped/",
+    "save_path_dataloader": "./data/data_loader.pth",
+    "train_ratio": 0.8,
+    "val_ratio": 0.1,
+    "batch_size": 4,
+    "image_size": 250,
+    "image_rotation_angle": 10,
+    "transformer": true
+  },
+  "model":{
+    "pretrained": "vggface2",
+    "num_classes" : null,
+    "classify" : false,
+    "image_size" : 250,
+    "classifier" : {
+      "input_size": 512,
+      "hidden_layer_ratio" : 2,
+      "num_classes": 4
+    }
+  }
+}

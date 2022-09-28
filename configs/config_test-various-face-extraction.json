@@ -1,0 +1,8 @@
+{
+  "data_source": "./data/photos_cropped/",
+  "user_names" : ["jhyoo", "jhoh", "jhongyoo", "kschoi"],
+  "theNumberOfImages" : 100,
+  "save_folder_for_embedding_numpy": "./data/",
+  "models" : [ "VGG-Face", "Facenet", "Facenet512", "OpenFace", "DeepFace", "DeepID", "ArcFace"],
+  "detector_backend" : "mtcnn"
+}

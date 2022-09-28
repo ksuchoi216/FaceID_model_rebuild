@@ -1,0 +1,31 @@
+{
+  "isLocalServer": false,
+  "sys_path_to_be_added": "./data",
+  "path_for_saving_model": "./data/face-extraction-model.pt",
+  "registered_data":{
+    "data_path": "./data/photos_from_video_test/registered_data/",
+    "train_ratio": 0.8,
+    "val_ratio": 0.1,
+    "batch_size": 4,
+    "image_size": 250,
+    "image_rotation_angle": 5,
+    "isTransformer": true
+  },
+  "unregistered_data":{
+    "data_path": "./data/photos_from_video_test/registered_data/",
+    "batch_size": 4,
+    "image_size": 250,
+    "image_rotation_angle": 5,
+    "isTransformer": true
+  },
+  "builder":{
+    "pretrained": "vggface2",
+    "num_classes" : 4,
+    "classify" : true,
+    "image_size" : 250
+  },
+  "runner":{
+    "image_size": 250,
+    "thresholds": [0.5]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "path_for_saving_model": "./data/face-extraction-model.pt",
+  "model_for_classification":{
+    "pretrained": "vggface2",
+    "num_classes" : 4,
+    "classify" : true,
+    "image_size" : 250
+  },
+  "model_for_embedding":{
+    "pretrained": "vggface2",
+    "num_classes" : null,
+    "classify" : false,
+    "image_size" : 250
+  },
+  "embedding":{
+    "data_path": "./data/photos_cropped/",
+    "save_path_dataloader": "./data/data_loader_for_embedding.pth",
+    "train_ratio": 0.8,
+    "val_ratio": 0.1,
+    "batch_size": 1,
+    "image_size": 250,
+    "image_rotation_angle": 10,
+    "transformer": false
+  }
+}

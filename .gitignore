@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# LINT PEP8
+.flake8
+.isort.cfg
+.markdownlint.yaml
+.trunk/
+
+# CUSTOM IGNORED
+
+/external_library/facenet_pytorch/
+source/*
+!*.npy

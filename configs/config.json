@@ -1,0 +1,33 @@
+{
+  "folder_name_for_source": "source",
+  "user_names" : ["jhyoo", "jhoh", "jhongyoo", "kschoi"],
+
+  "ExtractorPhotosFromVideo":{
+    "IsSavePhoto": false,
+    "IsSaveFace": false,
+    "folder_name_for_video": "video_220908",
+    "folder_name_to_save_photos":"photos_from_video",
+    "video_names" : ["1", "2", "3", "4"],
+    "video_extension" : ".mp4",
+    "frame_count_limit":100,
+    "frame_interval_for_sampling": 25
+  },
+
+  "ExtractorFacesFromPhotos":{
+    "folder_name_for_photos": "photos_from_video",
+    "folder_name_to_save_faces":"faces_from_photos",
+    "image_size": 240,
+    "filter_with_face_prob": true
+  },
+
+  "DatasetBasedOnFolders":{
+    "folder_name_for_images": "faces_from_photos",
+    "image_size": 240,
+    "image_rotation_angle": 10,
+    "pretrained": "vggface2",
+    "file_name_to_save_numpy": "face_data",
+    "DatasetFromNumpy":{
+      "file_name_to_save_dataloader": "dataloader"
+    }
+  }
+}
