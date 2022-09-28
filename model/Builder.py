@@ -38,7 +38,6 @@ def load_dataloader(phase):
     dataloader = torch.load(path_for_dataloader)
     return dataloader
 
-
 '''
 class Builder:
     def __init__(self, cfg):

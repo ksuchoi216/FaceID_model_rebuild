@@ -37,143 +37,46 @@ def macro_evaluation(preds_list, labels_list):
     return recall, precision
 
 
-def train_model(
+def runner(
     model,
+    phases,
     loss_fn,
     optimizer,
     scheduler,
-    dataloader,
-    num_epochs
+    dataloaders,
+    num_epochs=1
 ):
-    dataset_size = len(dataloader.dataset)
+    # dataset_size = len(dataloader.dataset)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     since = time.time()
-    phase = "train"
     
-    evaluation_result_matrix = torch.empty((num_epochs, 4)).to(device)
+    if "train" in phases:
+        train_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
 
+    if "val" in phases:
+        val_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
+    
     for epoch in range(num_epochs):
         print(f"Epoch {epoch}/{num_epochs - 1}")
-        
-        preds_list = []
-        labels_list = []
-
-
-        running_loss = 0.0
-        running_corrects = 0
-        running_prob = 0.0
-
-        model.train()  # Set model to training mode
-        # Iterate over data.
-        for i, (embs, labels) in enumerate(dataloader):
-            embs = embs.to(device)
-            labels = labels.to(device)
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # forward
-            # track history if only in train
-            with torch.set_grad_enabled(phase == "train"):
-                outputs = model(embs)
-                values, preds = torch.max(outputs, 1)
-                # values = F.sigmoid(values)
-                # print(values)
-                # print(preds)
-                prob = torch.sum(values)
-                # print(prob)
-                # print(labels.shape, preds.shape)
-                loss = loss_fn(outputs, labels)
-
-                # backward + optimize only if in training phase
-                if phase == "train":
-                    loss.backward()
-                    optimizer.step()
-
-            # statistics
-            running_prob += prob
-            # print('running_prob', running_prob)
-            running_loss += loss.item() * embs.size(0)
-            running_corrects += torch.sum(preds == labels.data)
-            preds_list = preds_list + preds.tolist()
-            labels_list = labels_list + labels.data.tolist()
-
-        if phase == "train":
-            scheduler.step()
-
-        # evaluation calculation
-        epoch_prob = running_prob / dataset_size
-        epoch_loss = running_loss / dataset_size
-        epoch_acc = running_corrects.double() / dataset_size
-
-        epoch_recall, epoch_precision = macro_evaluation(preds_list,
-                                                         labels_list)
-
-        # evaluation print
-        msg = (
-            f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f} "
-            f"recall: {epoch_recall:.4f} Precision: {epoch_precision:.4f} "
-            f'avg_prob: {epoch_prob:.4f}'
-        )
-        
-        print(msg)
-
-        # save evaluation results
-        evaluation_result_matrix[epoch][0] = epoch_loss
-        evaluation_result_matrix[epoch][1] = epoch_acc
-        evaluation_result_matrix[epoch][2] = epoch_recall
-        evaluation_result_matrix[epoch][3] = epoch_precision
-        print("-" * 100)
-        
-    time_elapsed = time.time() - since
-    msg = (f'Training complete in {time_elapsed // 60:.0f}m '
-           f'{time_elapsed % 60:.0f}s')
-    print(msg)
-
-    return model, evaluation_result_matrix
-
-
-def test_temp(
-    model,
-    loss_fn,
-    optimizer,
-    scheduler,
-    dataloaders
-):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    since = time.time()
-
-    best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
-
-    for epoch in range(num_epochs):
-        print(f"Epoch {epoch}/{num_epochs - 1}")
-
-        preds_list = []
-        labels_list = []
-
-        if "train" in phases:
-            train_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
-
-        if "val" in phases:
-            val_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
-
-        # Each epoch has a training and validation phase
+    
         for phase in phases:
-            print(f'[phase]:{phase}')
+            # print(f'[phase]:{phase}')
             if phase == "train":
                 model.train()  # Set model to training mode
             else:
                 model.eval()  # Set model to evaluate mode
+            
+            dataset_size = len(dataloaders[phase].dataset)
+            preds_list = []
+            labels_list = []
 
             running_loss = 0.0
             running_corrects = 0
             running_prob = 0.0
-
+            
             # Iterate over data.
-            for i, (images, labels) in enumerate(dataloaders[phase]):
-                images = images.to(device)
+            for i, (embs, labels) in enumerate(dataloaders[phase]):
+                embs = embs.to(device)
                 labels = labels.to(device)
 
                 # zero the parameter gradients
@@ -182,23 +85,26 @@ def test_temp(
                 # forward
                 # track history if only in train
                 with torch.set_grad_enabled(phase == "train"):
-                    outputs = model(images)
+                    outputs = model(embs)
                     values, preds = torch.max(outputs, 1)
-                    values = F.sigmoid(values)
+                    # values = F.sigmoid(values)
                     # print(values)
+                    # print(preds)
                     prob = torch.sum(values)
                     # print(prob)
-                    loss = criterion(outputs, labels)
+                    # print(labels.shape, preds.shape)
+                    loss = loss_fn(outputs, labels)
 
                     # backward + optimize only if in training phase
                     if phase == "train":
+                        optimizer.zero_grad()
                         loss.backward()
                         optimizer.step()
 
                 # statistics
                 running_prob += prob
                 # print('running_prob', running_prob)
-                running_loss += loss.item() * images.size(0)
+                running_loss += loss.item() * embs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
                 preds_list = preds_list + preds.tolist()
                 labels_list = labels_list + labels.data.tolist()
@@ -207,9 +113,9 @@ def test_temp(
                 scheduler.step()
 
             # evaluation calculation
-            epoch_prob = running_prob / dataset_sizes[phase]
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+            epoch_prob = running_prob / dataset_size
+            epoch_loss = running_loss / dataset_size
+            epoch_acc = running_corrects.double() / dataset_size
 
             epoch_recall, epoch_precision = macro_evaluation(preds_list,
                                                              labels_list)
@@ -220,6 +126,7 @@ def test_temp(
                 f"recall: {epoch_recall:.4f} Precision: {epoch_precision:.4f} "
                 f'avg_prob: {epoch_prob:.4f}'
             )
+            
             print(msg)
 
             # save evaluation results
@@ -233,22 +140,15 @@ def test_temp(
                 val_evaluation_matrix[epoch][1] = epoch_acc
                 val_evaluation_matrix[epoch][2] = epoch_recall
                 val_evaluation_matrix[epoch][3] = epoch_precision
-
-            # deep copy the model
-            if phase == "val" and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-
-        print("-" * 100)
+            
+    print("-" * 70)
+        
     time_elapsed = time.time() - since
-    print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-    print(f"Best val Acc: {best_acc:4f}")
+    msg = (f'Training complete in {time_elapsed // 60:.0f}m '
+           f'{time_elapsed % 60:.0f}s')
+    print(msg)
 
-    # load best model weights
-    model.load_state_dict(best_model_wts)
-
-    if phases[0] != "test":
-        return model, train_evaluation_matrix, val_evaluation_matrix
-    else:
+    if phases[0] == "test":
         print("there is no return value becasue of test mode")
-        return epoch_prob
+    else:
+        return model, train_evaluation_matrix, val_evaluation_matrix
