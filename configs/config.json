@@ -29,5 +29,10 @@
     "DatasetFromNumpy":{
       "file_name_to_save_dataloader": "dataloader"
     }
+  },
+  "model":{
+    "input_size": 512,
+    "output_size" : 4,
+    "classify": true
   }
 }
