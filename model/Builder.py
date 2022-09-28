@@ -1,4 +1,5 @@
-# from torchsummary import summary
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,17 +16,28 @@ class FaceRecognizer(nn.Module):
         self.fc1 = nn.Linear(input_size, output_size)
 
     def forward(self, x):
-        if self.classify:
-            x = self.fc1(x)
-        else:
-            x = F.normalize(x, p=2, dim=1)
+        x = torch.flatten(x, 1)
+        # print(x.shape)
+        x = self.fc1(x)
+        # print(x.shape)
+        # print(x)
+        x = F.softmax(x, dim=1)
+        # print(x)
         return x
 
 
 def build_model(cfg):
     model = FaceRecognizer(cfg)
     return model
-    
+
+
+def load_dataloader(phase):
+    source_path = './data'
+    file_name = 'dataloader_'+phase+'.pt'
+    path_for_dataloader = os.path.join(source_path, file_name)
+    dataloader = torch.load(path_for_dataloader)
+    return dataloader
+
 
 '''
 class Builder:

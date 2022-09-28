@@ -37,127 +37,103 @@ def macro_evaluation(preds_list, labels_list):
     return recall, precision
 
 
-def train(
+def train_model(
     model,
     loss_fn,
     optimizer,
     scheduler,
-    dataloaders
+    dataloader,
+    num_epochs
 ):
+    dataset_size = len(dataloader.dataset)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     since = time.time()
-
-    best_model_wts = copy.deepcopy(model.state_dict())
-    best_acc = 0.0
+    phase = "train"
+    
+    evaluation_result_matrix = torch.empty((num_epochs, 4)).to(device)
 
     for epoch in range(num_epochs):
         print(f"Epoch {epoch}/{num_epochs - 1}")
-
+        
         preds_list = []
         labels_list = []
 
-        if "train" in phases:
-            train_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
 
-        if "val" in phases:
-            val_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
+        running_loss = 0.0
+        running_corrects = 0
+        running_prob = 0.0
 
-        # Each epoch has a training and validation phase
-        for phase in phases:
-            print(f'[phase]:{phase}')
-            if phase == "train":
-                model.train()  # Set model to training mode
-            else:
-                model.eval()  # Set model to evaluate mode
+        model.train()  # Set model to training mode
+        # Iterate over data.
+        for i, (embs, labels) in enumerate(dataloader):
+            embs = embs.to(device)
+            labels = labels.to(device)
 
-            running_loss = 0.0
-            running_corrects = 0
-            running_prob = 0.0
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
-            # Iterate over data.
-            for i, (images, labels) in enumerate(dataloaders[phase]):
-                images = images.to(device)
-                labels = labels.to(device)
+            # forward
+            # track history if only in train
+            with torch.set_grad_enabled(phase == "train"):
+                outputs = model(embs)
+                values, preds = torch.max(outputs, 1)
+                # values = F.sigmoid(values)
+                # print(values)
+                # print(preds)
+                prob = torch.sum(values)
+                # print(prob)
+                # print(labels.shape, preds.shape)
+                loss = loss_fn(outputs, labels)
 
-                # zero the parameter gradients
-                optimizer.zero_grad()
+                # backward + optimize only if in training phase
+                if phase == "train":
+                    loss.backward()
+                    optimizer.step()
 
-                # forward
-                # track history if only in train
-                with torch.set_grad_enabled(phase == "train"):
-                    outputs = model(images)
-                    values, preds = torch.max(outputs, 1)
-                    values = F.sigmoid(values)
-                    # print(values)
-                    prob = torch.sum(values)
-                    # print(prob)
-                    loss = criterion(outputs, labels)
+            # statistics
+            running_prob += prob
+            # print('running_prob', running_prob)
+            running_loss += loss.item() * embs.size(0)
+            running_corrects += torch.sum(preds == labels.data)
+            preds_list = preds_list + preds.tolist()
+            labels_list = labels_list + labels.data.tolist()
 
-                    # backward + optimize only if in training phase
-                    if phase == "train":
-                        loss.backward()
-                        optimizer.step()
+        if phase == "train":
+            scheduler.step()
 
-                # statistics
-                running_prob += prob
-                # print('running_prob', running_prob)
-                running_loss += loss.item() * images.size(0)
-                running_corrects += torch.sum(preds == labels.data)
-                preds_list = preds_list + preds.tolist()
-                labels_list = labels_list + labels.data.tolist()
+        # evaluation calculation
+        epoch_prob = running_prob / dataset_size
+        epoch_loss = running_loss / dataset_size
+        epoch_acc = running_corrects.double() / dataset_size
 
-            if phase == "train":
-                scheduler.step()
+        epoch_recall, epoch_precision = macro_evaluation(preds_list,
+                                                         labels_list)
 
-            # evaluation calculation
-            epoch_prob = running_prob / dataset_sizes[phase]
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+        # evaluation print
+        msg = (
+            f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f} "
+            f"recall: {epoch_recall:.4f} Precision: {epoch_precision:.4f} "
+            f'avg_prob: {epoch_prob:.4f}'
+        )
+        
+        print(msg)
 
-            epoch_recall, epoch_precision = macro_evaluation(preds_list,
-                                                             labels_list)
-
-            # evaluation print
-            msg = (
-                f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f} "
-                f"recall: {epoch_recall:.4f} Precision: {epoch_precision:.4f} "
-                f'avg_prob: {epoch_prob:.4f}'
-            )
-            print(msg)
-
-            # save evaluation results
-            if phase == "train":
-                train_evaluation_matrix[epoch][0] = epoch_loss
-                train_evaluation_matrix[epoch][1] = epoch_acc
-                train_evaluation_matrix[epoch][2] = epoch_recall
-                train_evaluation_matrix[epoch][3] = epoch_precision
-            elif phase == "val":
-                val_evaluation_matrix[epoch][0] = epoch_loss
-                val_evaluation_matrix[epoch][1] = epoch_acc
-                val_evaluation_matrix[epoch][2] = epoch_recall
-                val_evaluation_matrix[epoch][3] = epoch_precision
-
-            # deep copy the model
-            if phase == "val" and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-
+        # save evaluation results
+        evaluation_result_matrix[epoch][0] = epoch_loss
+        evaluation_result_matrix[epoch][1] = epoch_acc
+        evaluation_result_matrix[epoch][2] = epoch_recall
+        evaluation_result_matrix[epoch][3] = epoch_precision
         print("-" * 100)
+        
     time_elapsed = time.time() - since
-    print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
-    print(f"Best val Acc: {best_acc:4f}")
+    msg = (f'Training complete in {time_elapsed // 60:.0f}m '
+           f'{time_elapsed % 60:.0f}s')
+    print(msg)
 
-    # load best model weights
-    model.load_state_dict(best_model_wts)
+    return model, evaluation_result_matrix
 
-    if phases[0] != "test":
-        return model, train_evaluation_matrix, val_evaluation_matrix
-    else:
-        print("there is no return value becasue of test mode")
-        return epoch_prob
 
-def test(
+def test_temp(
     model,
     loss_fn,
     optimizer,

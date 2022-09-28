@@ -139,7 +139,7 @@ class DatasetFromNumpy(Dataset):
 
     def __getitem__(self, idx):
 
-        emb = self.emb_numpy_dataset[idx]
+        emb = self.emb_numpy_dataset[idx].squeeze()
         label = self.label_numpy_dataset[idx]
 
         return (emb, label)
