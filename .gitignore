@@ -136,7 +136,7 @@ dmypy.json
 .trunk/
 
 # CUSTOM IGNORED
-
+runs/
 /external_library/facenet_pytorch/
 source/*
 !*.npy
