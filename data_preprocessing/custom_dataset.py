@@ -39,18 +39,19 @@ class DatasetBasedOnFolders():
         print(f'Loading faces from {self.path_for_image}')
         
         # image_rotation_angle = cfg["image_rotation_angle"]
-        # transformer = transforms.Compose(
-        #     [
-        #         transforms.Resize(image_size),
-        #         # transforms.RandomHorizontalFlip(p=0.5),
-        #         # transforms.RandomVerticalFlip(p=0.5),
-        #         # transforms.RandomRotation((0, image_rotation_angle)),
-        #         transforms.ToTensor(),
-        #         transforms.Normalize(
-        #             (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
-        #         ),  # normalize to Imagenet mean and std
-        #     ]
-        # )
+        transformer = transforms.Compose(
+            [
+                transforms.Resize(image_size),
+                # transforms.RandomHorizontalFlip(p=0.5),
+                # transforms.RandomVerticalFlip(p=0.5),
+                # transforms.RandomRotation((0, image_rotation_angle)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)
+                ),  # normalize to Imagenet mean and std
+            ]
+        )
+        
         self.path_numpy_emb = os.path.join(
             self.source_path,
             cfg['file_name_to_save_numpy']+'_emb.npy'
@@ -60,7 +61,8 @@ class DatasetBasedOnFolders():
             cfg['file_name_to_save_numpy']+'_label.npy'
         )
         
-        self.image_dataset = datasets.ImageFolder(self.path_for_image)
+        self.image_dataset = datasets.ImageFolder(self.path_for_image,
+                                                  transform=transformer)
 
         self.idx_to_class = {i: c for c, i
                              in self.image_dataset.class_to_idx.items()}
