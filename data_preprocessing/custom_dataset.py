@@ -14,11 +14,13 @@ class DatasetBasedOnFolders():
         self.cfg_for_DatasetFromNumpy = cfg["DatasetFromNumpy"]
         
         pretrained = cfg["pretrained"]
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        print(f"device is {device}")
+        self.device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+            )
+        print(f"device is {self.device}")
         self.face_feature_extractor = InceptionResnetV1(
             pretrained=pretrained,
-            device=device
+            device=self.device
         ).eval()
         
         image_size = cfg["image_size"]
@@ -28,7 +30,7 @@ class DatasetBasedOnFolders():
             margin=0,
             keep_all=False,
             min_face_size=40,
-            device=device
+            device=self.device
         )
         
         self.source_path = './'+cfg['folder_name_for_source']
@@ -39,6 +41,7 @@ class DatasetBasedOnFolders():
         print(f'Loading faces from {self.path_for_image}')
         
         # image_rotation_angle = cfg["image_rotation_angle"]
+
         transformer = transforms.Compose(
             [
                 transforms.Resize(image_size),
@@ -51,13 +54,13 @@ class DatasetBasedOnFolders():
                 ),  # normalize to Imagenet mean and std
             ]
         )
-        
+
         self.path_numpy_emb = os.path.join(
-            self.source_path,
+            './data',
             cfg['file_name_to_save_numpy']+'_emb.npy'
         )
         self.path_numpy_label = os.path.join(
-            self.source_path,
+            './data',
             cfg['file_name_to_save_numpy']+'_label.npy'
         )
         
@@ -73,10 +76,9 @@ class DatasetBasedOnFolders():
         data_length = len(self.image_dataset)
         print(f"data length: {data_length}")
         
+    def createNumpy(self):
         def collate_fn(x):
             return x[0]
-
-    def CreateNumpy(self):
 
         dataloader = DataLoader(self.image_dataset,
                                 collate_fn=collate_fn)
@@ -87,11 +89,16 @@ class DatasetBasedOnFolders():
             print(f'[{i:4}]converting to numpy...')
             # print(type(img), img)
             # print(type(idx))
+            
             face, prob = self.face_detector(img, return_prob=True)
             # print(face.shape, type(face), prob)
-            emb = self.face_feature_extractor(face.unsqueeze(0))
+
+            emb = self.face_feature_extractor(
+                face.unsqueeze(0).to(self.device)
+                )
             # print(emb.shape, type(emb))
-            emb_numpy_dataset.append(emb.detach().numpy())
+            emb = np.squeeze(emb.to('cpu').detach().numpy())
+            emb_numpy_dataset.append(emb)
             idx_numpy_dataset.append(idx)
             
         self.emb_numpy_dataset = np.asarray(emb_numpy_dataset)
@@ -100,11 +107,14 @@ class DatasetBasedOnFolders():
         print(self.emb_numpy_dataset.shape)
         print(self.idx_numpy_dataset.shape)
 
-        with open(self.path_numpy_emb, 'wb') as f:
-            np.save(f, self.emb_numpy_dataset)
-        with open(self.path_numpy_label, 'wb') as f:
-            np.save(f, self.idx_numpy_dataset)
-        
+        try:
+            with open(self.path_numpy_emb, 'wb') as f:
+                np.save(f, self.emb_numpy_dataset)
+            with open(self.path_numpy_label, 'wb') as f:
+                np.save(f, self.idx_numpy_dataset)
+        except FileExistsError:
+            print(f'saving numpy failed !')
+            
     def loadNumpy(self, return_dataset=False):
         with open(self.path_numpy_emb, 'rb') as f:
             self.emb_numpy_dataset = np.load(f)
@@ -141,7 +151,8 @@ class DatasetFromNumpy(Dataset):
 
     def __getitem__(self, idx):
 
-        emb = self.emb_numpy_dataset[idx].squeeze()
+        # emb = self.emb_numpy_dataset[idx].squeeze()
+        emb = self.emb_numpy_dataset[idx]
         label = self.label_numpy_dataset[idx]
 
         return (emb, label)
@@ -200,6 +211,7 @@ def buildDataLoaders(
 
 def saveDataloaders(source_folder, dataloaders):
     source_path = os.path.join('./', source_folder)
+    
     if not os.path.exists(source_path):
         os.makedirs(source_path)
     
@@ -207,4 +219,4 @@ def saveDataloaders(source_folder, dataloaders):
         file_name = 'dataloader_'+phase+'.pt'
         path = os.path.join(source_path, file_name)
         torch.save(dataloader, path)
-        print(f'saved in {path}')
+        print(f'saved in {path}')    
