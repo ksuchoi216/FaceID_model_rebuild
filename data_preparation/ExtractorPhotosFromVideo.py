@@ -6,14 +6,14 @@ class ExtractorPhotosFromVideo(object):
     def __init__(self, cfg):
         IsSavePhoto = cfg['IsSavePhoto']
         IsSaveFace = cfg['IsSaveFace']
-        
+
         folder_name_for_source = cfg['folder_name_for_source']
         folder_name_for_video = cfg['folder_name_for_video']
         folder_name_to_save_photos = cfg['folder_name_to_save_photos']
         user_names = cfg['user_names']
         video_names = cfg['video_names']
         video_extension = cfg['video_extension']
-        
+
         frame_count_limit = cfg['frame_count_limit']
         frame_interval_for_sampling = cfg['frame_interval_for_sampling']
 
@@ -33,13 +33,13 @@ class ExtractorPhotosFromVideo(object):
             path_for_username_folder = os.path.join(path_for_photo,
                                                     user_name)
             print(f'{path_for_video} with {path_for_username_folder}')
-        
+
             if not os.path.exists(path_for_username_folder):
                 os.makedirs(path_for_username_folder)
-            
+
             vc = cv2.VideoCapture(path_for_video)
             success, frame = vc.read()
-            
+
             if not success:
                 print(f"Capturing frames failed from {path_for_video}")
 
