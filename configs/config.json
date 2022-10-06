@@ -5,7 +5,7 @@
   "ExtractorPhotosFromVideo":{
     "IsSavePhoto": false,
     "IsSaveFace": false,
-    "folder_name_for_video": "video_220908",
+    "folder_name_for_video": "video",
     "folder_name_to_save_photos":"photos_from_video",
     "video_names" : ["1", "2", "3", "4"],
     "video_extension" : ".mp4",

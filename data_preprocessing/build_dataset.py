@@ -40,9 +40,7 @@ class FolderDataset():
             cfg['folder_name_for_images']
         )
         print(f'Loading faces from {self.path_for_image}')
-
         self.image_dataset = datasets.ImageFolder(self.path_for_image)
-
         self.idx_to_class = {i: c for c, i
                              in self.image_dataset.class_to_idx.items()}
 
