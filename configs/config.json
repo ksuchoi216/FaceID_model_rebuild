@@ -1,5 +1,6 @@
 {
-  "folder_name_for_source": "source",
+  "folder_for_source": "source",
+  "folder_for_data": "data",
   "user_names" : ["jhyoo", "jhoh", "jhongyoo", "kschoi"],
 
   "ExtractorPhotosFromVideo":{
@@ -29,9 +30,20 @@
       "file_name_to_save_dataloader": "dataloader"
     }
   },
-  "model":{
+  "model_fcnn":{
+    "model_name": "fcnn",
     "input_size": 512,
     "output_size" : 4,
     "classify": true
+  },
+  "model_dist":{
+    "model_name": "dist",
+    "face_extractor": {
+      "image_size": 240,
+      "pretrained": "vggface2"
+    },
+    "folder_for_photos":"saved_photos",
+    "isCosSimilarity": true
+
   }
 }

@@ -34,13 +34,15 @@ class FolderDataset():
             device=self.device
         )
 
-        self.source_path = './'+cfg['folder_name_for_source']
+        self.source_path = './'+cfg['folder_for_source']
         self.path_for_image = os.path.join(
             self.source_path,
             cfg['folder_name_for_images']
         )
         print(f'Loading faces from {self.path_for_image}')
+
         self.image_dataset = datasets.ImageFolder(self.path_for_image)
+
         self.idx_to_class = {i: c for c, i
                              in self.image_dataset.class_to_idx.items()}
 
@@ -52,10 +54,10 @@ class FolderDataset():
 
     def setFilePath(
             self,
-            source_path, subfolder_name,
+            source_path, save_folder,
             file_name, extension_name
     ):
-        source_path = os.path.join(source_path, subfolder_name)
+        source_path = os.path.join(source_path, save_folder)
         if not os.path.exists(source_path):
             os.makedirs(source_path)
 
@@ -94,8 +96,7 @@ class FolderDataset():
         return np_emb, np_lb
 
     def saveToNumpy(self, np_emb, np_lb):
-        print(np_emb.shape)
-        print(np_lb.shape)
+        print(f'saved emb:{np_emb.shape} lb:{np_lb.shape}')
 
         try:
             with open(self.path_emb, 'wb') as f:
@@ -111,8 +112,7 @@ class FolderDataset():
         with open(self.path_lb, 'rb') as f:
             np_lb = np.load(f)
 
-        print(np_emb.shape)
-        print(np_lb.shape)
+        print(f'loaded emb:{np_emb.shape} lb:{np_lb.shape}')
 
         return np_emb, np_lb
 
@@ -153,8 +153,7 @@ class DatasetFromNumpy(Dataset):
         self.np_emb = np_emb
         self.np_lb = np_lb
 
-        print(self.np_emb.shape)
-        print(self.np_lb.shape)
+        print(f'dataset initial emb:{np_emb.shape} lb:{np_lb.shape}')
 
     def __len__(self):
         return len(self.np_lb)
@@ -218,8 +217,9 @@ def buildDataLoaders(
     return dataloaders
 
 
-def saveDataloaders(source_folder, dataloaders):
-    source_path = os.path.join('./', source_folder)
+def saveDataloaders(source_folder, save_folder,  dataloaders):
+    source_folder = './'+source_folder
+    source_path = os.path.join(source_folder, save_folder)
 
     if not os.path.exists(source_path):
         os.makedirs(source_path)
@@ -229,3 +229,38 @@ def saveDataloaders(source_folder, dataloaders):
         path = os.path.join(source_path, file_name)
         torch.save(dataloader, path)
         print(f'saved in {path}')
+
+
+def loadNumpy(source_path, file_name):
+    path = os.path.join(source_path, file_name)
+    print(f'loading from {path}')
+
+    try:
+        with open(path, 'rb') as f:
+            numpy_array = np.load(f)
+
+        return numpy_array
+    except FileExistsError:
+        print(f'loading numpy failed !')
+
+
+def saveNumpy(numpy, source_path, file_name):
+    path = os.path.join(source_path, file_name)
+    print(f'saveing to {path}')
+
+    try:
+        with open(path, 'wb') as f:
+            np.save(f, numpy)
+
+        return numpy_array
+    except FileExistsError:
+        print(f'saving numpy failed !')
+
+
+def splitNumpy(numpy, ratio_train_data, ratio_val_data,
+               source_path, file_name):
+
+    dataset_size = numpy.shape[0]
+    train_size = int(dataset_size * ratio_train_data)
+    val_size = int(dataset_size * ratio_val_data)
+    test_size = dataset_size - train_size - val_size

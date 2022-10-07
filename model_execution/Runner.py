@@ -37,6 +37,19 @@ def macro_evaluation(preds_list, labels_list):
     return recall, precision
 
 
+def runner_dist(model, phases, dataloaders, num_epochs=1):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    for epoch in range(num_epochs):
+        print(f"Epoch {epoch}/{num_epochs - 1}")
+        for phase in phases:
+            dataset_size = len(dataloaders[phase].dataset)
+            for i, (embs, labels) in enumerate(dataloaders[phase]):
+                embs = embs.to(device)
+                labels = labels.to(device)
+                output = model.forward(embs)
+
+
 def runner(
     model,
     phases,
@@ -49,23 +62,23 @@ def runner(
     # dataset_size = len(dataloader.dataset)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     since = time.time()
-    
+
     if "train" in phases:
         train_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
 
     if "val" in phases:
         val_evaluation_matrix = torch.empty((num_epochs, 4)).to(device)
-    
+
     for epoch in range(num_epochs):
         print(f"Epoch {epoch}/{num_epochs - 1}")
-    
+
         for phase in phases:
             # print(f'[phase]:{phase}')
             if phase == "train":
                 model.train()  # Set model to training mode
             else:
                 model.eval()  # Set model to evaluate mode
-            
+
             dataset_size = len(dataloaders[phase].dataset)
             preds_list = []
             labels_list = []
@@ -73,7 +86,7 @@ def runner(
             running_loss = 0.0
             running_corrects = 0
             running_prob = 0.0
-            
+
             # Iterate over data.
             for i, (embs, labels) in enumerate(dataloaders[phase]):
                 embs = embs.to(device)
@@ -126,7 +139,7 @@ def runner(
                 f"recall: {epoch_recall:.4f} Precision: {epoch_precision:.4f} "
                 f'avg_prob: {epoch_prob:.4f}'
             )
-            
+
             print(msg)
 
             # save evaluation results
@@ -140,9 +153,9 @@ def runner(
                 val_evaluation_matrix[epoch][1] = epoch_acc
                 val_evaluation_matrix[epoch][2] = epoch_recall
                 val_evaluation_matrix[epoch][3] = epoch_precision
-            
+
     print("-" * 70)
-        
+
     time_elapsed = time.time() - since
     msg = (f'Training complete in {time_elapsed // 60:.0f}m '
            f'{time_elapsed % 60:.0f}s')
