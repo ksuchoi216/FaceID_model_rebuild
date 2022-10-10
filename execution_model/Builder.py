@@ -14,10 +14,14 @@ def load_dataloader(phase, source_folder, save_folder):
     source_path = os.path.join(source_folder, save_folder)
     file_name = 'dataloader_'+phase+'.pt'
     path_for_dataloader = os.path.join(source_path, file_name)
-    print(path_for_dataloader)
-    dataloader = torch.load(path_for_dataloader)
-    return dataloader
-
+    try:
+        dataloader = torch.load(path_for_dataloader)
+        dataset_size = len(dataloader.dataset)
+        print(f'[{phase}][{dataset_size}] loaded from {path_for_dataloader}')
+        return dataloader
+    except FileIsNotFoundError:
+        print('file is not found')
+        
 
 class FullyConnectedNueralNetwork(nn.Module):
     def __init__(self, cfg):
@@ -95,27 +99,28 @@ class DistanceBasedModel(object):
         batch_size, _ = embs.shape
         # print('batch_size:', batch_size)
 
-        pred_list = []
+        preds = []
+        dists = []
         for i in range(batch_size):
             emb = embs[i, :]
-            # print('emb:', emb.shape)
-
+            
             dist_list = []
             for emb_db in self.embedding_list:
                 dist = self.dist_fn(emb, emb_db)
                 dist_list.append(round(dist, 3))
 
             if self.isCosSimilarity:
-                target_dist = max(dist_list)
+                dist = max(dist_list)
             else:
-                target_dist = min(dist_list)
+                dist = min(dist_list)
 
-            target_idx = dist_list.index(target_dist)
-            # name = self.name_list[target_idx]
-            pred_list.append(target_idx)
+            pred = dist_list.index(dist)
+            preds.append(pred)
+            dists.append(dist)
 
-        print('pred_list:', pred_list)
-        return pred_list
+        preds = torch.IntTensor(preds)
+        dists = torch.FloatTensor(dists)
+        return preds, dists
 
 
 def build_model(cfg):
@@ -123,8 +128,10 @@ def build_model(cfg):
 
     if model_name == "fcnn":
         model = FullyConnectedNeuralNetwork(cfg)
+        print(f'model is FCNN')
     elif model_name == 'dist':
         model = DistanceBasedModel(cfg)
+        print(f'model is DistanceBasedModel')
     else:
         raise ValueError()
 

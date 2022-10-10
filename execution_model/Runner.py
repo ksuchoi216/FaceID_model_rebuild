@@ -1,9 +1,11 @@
 import copy
 import time
 
-import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+
 from external_library import MTCNN
 
 
@@ -37,17 +39,67 @@ def macro_evaluation(preds_list, labels_list):
     return recall, precision
 
 
-def runner_dist(model, phases, dataloaders, num_epochs=1):
+def control_threshold(
+        labels: np.ndarray,
+        preds: np.ndarray,
+        dists: np.ndarray,
+        threshold=0.5,
+        isCosSimilarity=True
+        ):
+    
+    # TODO pass dist avg
+    corrections = np.where(labels == preds, 1, 0)
+    if isCosSimilarity:
+        thr_condition = (dists >= threshold)
+    else:
+        thr_condition = (dists <= threshold)
+    threshold_mask = np.where(thr_condition, 1, 0)
+    acc = corrections.sum()
+    acc_threshold = np.where((corrections == 1) 
+                             & 
+                             (threshold_mask == 1), 1, 0).sum()
+    
+    return acc, acc_threshold   
+
+
+def runner_dist(model, phases, dataloaders, num_epochs=1,
+                threshold=0.5, isCosSimilarity=True):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     for epoch in range(num_epochs):
         print(f"Epoch {epoch}/{num_epochs - 1}")
         for phase in phases:
             dataset_size = len(dataloaders[phase].dataset)
+            print(f'[{phase}] dataset size: {dataset_size}')
+            total_acc = 0
+            total_acc_thr = 0
+            
             for i, (embs, labels) in enumerate(dataloaders[phase]):
                 embs = embs.to(device)
                 labels = labels.to(device)
-                output = model.forward(embs)
+                preds, dists = model.forward(embs)
+                # print(f'labels: {labels.numpy()} {labels.numpy().shape}')
+                # print(f'preds: {preds.numpy()} {preds.numpy().shape}')
+                print(f'dists: {dists.numpy()} {dists.numpy().shape}')
+                acc, acc_thr = control_threshold(
+                    labels=labels.numpy(),
+                    preds=preds.numpy(),
+                    dists=dists.numpy(),
+                    threshold=threshold,
+                    isCosSimilarity=True
+                )
+                
+                total_acc += acc
+                total_acc_thr += acc_thr
+            
+            total_acc = total_acc / dataset_size
+            total_acc_thr = total_acc_thr / dataset_size
+            
+            print(f'[{phase}] total_acc: {total_acc:4f}\
+                  total_acc_thr: {total_acc_thr:4f}')
+            
+                
+                
 
 
 def runner(
