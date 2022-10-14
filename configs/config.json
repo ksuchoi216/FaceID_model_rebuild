@@ -1,29 +1,28 @@
 {
-  "folder_for_source": "source",
+  "folder_for_raw": "raw",
   "folder_for_data": "data",
   "user_names" : ["jhyoo", "jhoh", "jhongyoo", "kschoi"],
 
   "ExtractorPhotosFromVideo":{
-    "IsSavePhoto": false,
-    "IsSaveFace": false,
-    "folder_name_for_video": "video",
-    "folder_name_to_save_photos":"photos_from_video",
+    "folder_for_video": "video",
+    "folder_to_save_photos":"photos_from_video",
     "video_names" : ["1", "2", "3", "4"],
     "video_extension" : ".mp4",
-    "frame_count_limit":100,
-    "frame_interval_for_sampling": 25
+    "frame_count_limit": 300,
+    "frame_interval_for_sampling": 10
   },
 
   "ExtractorFacesFromPhotos":{
-    "folder_name_for_photos": "photos_from_video",
-    "folder_name_to_save_faces":"faces_from_photos",
-    "image_size": 240,
-    "filter_with_face_prob": true
+    "folder_for_photos": "photos_from_video",
+    "folder_to_save_faces":"faces_from_photos",
+    "image_size": 140,
+    "FaceThreshold": 0.97,
+    "isShowImage": true
   },
 
   "FolderDataset":{
-    "folder_name_for_images": "faces_from_photos",
-    "image_size": 240,
+    "folder_for_images": "photos_from_video",
+    "image_size": 140,
     "image_rotation_angle": 10,
     "pretrained": "vggface2",
     "DatasetFromNumpy":{
@@ -43,7 +42,7 @@
       "pretrained": "vggface2"
     },
     "folder_for_photos":"saved_photos",
-    "isCosSimilarity": true
+    "isCosSimilarity": false
 
   }
 }

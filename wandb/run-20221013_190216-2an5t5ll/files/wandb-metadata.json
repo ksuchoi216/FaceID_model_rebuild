@@ -1,0 +1,23 @@
+{
+    "os": "Linux-5.4.0-122-generic-x86_64-with-glibc2.27",
+    "python": "3.9.1",
+    "heartbeatAt": "2022-10-13T10:02:22.992952",
+    "startedAt": "2022-10-13T10:02:16.895968",
+    "docker": null,
+    "gpu": "Tesla P100-PCIE-16GB",
+    "gpu_count": 8,
+    "cpu_count": 80,
+    "cuda": "10.2.89",
+    "args": null,
+    "state": "running",
+    "program": "<python with no main file>",
+    "git": {
+        "remote": "git@github.com:ksuchoi216/FaceID_model_rebuild.git",
+        "commit": "49af7eb20c02b08d1e671f3e36ceed8bcadec7d2"
+    },
+    "email": "ksuchoi216@gmail.com",
+    "root": "/notebook/personal/ksuchoi216/FaceID_model_rebuild",
+    "host": "ubuntu",
+    "username": "root",
+    "executable": "/root/.pyenv/versions/python39/bin/python3.9"
+}

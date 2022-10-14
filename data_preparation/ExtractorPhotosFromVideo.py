@@ -4,12 +4,9 @@ import cv2
 
 class ExtractorPhotosFromVideo(object):
     def __init__(self, cfg):
-        IsSavePhoto = cfg['IsSavePhoto']
-        IsSaveFace = cfg['IsSaveFace']
-
-        folder_name_for_source = cfg['folder_name_for_source']
-        folder_name_for_video = cfg['folder_name_for_video']
-        folder_name_to_save_photos = cfg['folder_name_to_save_photos']
+        folder_for_raw = cfg['folder_for_raw']
+        folder_for_video = cfg['folder_for_video']
+        folder_to_save_photos = cfg['folder_to_save_photos']
         user_names = cfg['user_names']
         video_names = cfg['video_names']
         video_extension = cfg['video_extension']
@@ -17,17 +14,17 @@ class ExtractorPhotosFromVideo(object):
         frame_count_limit = cfg['frame_count_limit']
         frame_interval_for_sampling = cfg['frame_interval_for_sampling']
 
-        source_path = './'+folder_name_for_source
-        path_for_photo = os.path.join(source_path,
-                                      folder_name_to_save_photos)
-        if IsSavePhoto and not os.path.exists(path_for_photo):
+        raw_path = './'+folder_for_raw
+        path_for_photo = os.path.join(raw_path,
+                                      folder_to_save_photos)
+        if not os.path.exists(path_for_photo):
             os.makedirs(path_for_photo)
         print(path_for_photo)
 
         for user_name, video_name in zip(user_names, video_names):
             path_for_video = os.path.join(
-                source_path,
-                folder_name_for_video,
+                raw_path,
+                folder_for_video,
                 video_name + video_extension
             )
             path_for_username_folder = os.path.join(path_for_photo,
@@ -52,7 +49,7 @@ class ExtractorPhotosFromVideo(object):
                     h, w, ch = frame.shape
 
                 frame = frame[int(h*(2/8)):int(h*(8/8)),
-                              int(w*(2/8)): int(w*(6/8))]
+                              int(w*(2/8)): int(w*(6/8)), :]
 
                 if frame_count == frame_count_limit:
                     break

@@ -12,7 +12,9 @@ from external_library import InceptionResnetV1, MTCNN
 
 
 class FolderDataset():
-    def __init__(self, cfg):
+    def __init__(self, cfg, face_threshold=0.5):
+        self.face_threshold = face_threshold
+        print(f'face_threshold: {face_threshold}')
         self.cfg_for_DatasetFromNumpy = cfg["DatasetFromNumpy"]
 
         pretrained = cfg["pretrained"]
@@ -34,10 +36,10 @@ class FolderDataset():
             device=self.device
         )
 
-        self.source_path = './'+cfg['folder_for_source']
+        self.raw_path = './'+cfg['folder_for_raw']
         self.path_for_image = os.path.join(
-            self.source_path,
-            cfg['folder_name_for_images']
+            self.raw_path,
+            cfg['folder_for_images']
         )
         print(f'Loading faces from {self.path_for_image}')
 
@@ -50,21 +52,21 @@ class FolderDataset():
             print(i, name)
 
         data_length = len(self.image_dataset)
-        print(f"data length: {data_length}")
+        # print(f"data length: {data_length}")
 
     def setFilePath(
             self,
-            source_path, save_folder,
+            raw_path, save_folder,
             file_name, extension_name
     ):
-        source_path = os.path.join(source_path, save_folder)
-        if not os.path.exists(source_path):
-            os.makedirs(source_path)
+        raw_path = os.path.join(raw_path, save_folder)
+        if not os.path.exists(raw_path):
+            os.makedirs(raw_path)
 
         file_name_emb = file_name + '_emb' + extension_name
         file_name_lb = file_name + '_lb' + extension_name
-        self.path_emb = os.path.join(source_path, file_name_emb)
-        self.path_lb = os.path.join(source_path, file_name_lb)
+        self.path_emb = os.path.join(raw_path, file_name_emb)
+        self.path_lb = os.path.join(raw_path, file_name_lb)
 
         print(f'path_emb: {self.path_emb}')
         print(f'path_lb: {self.path_lb}')
@@ -83,12 +85,13 @@ class FolderDataset():
 
             face, prob = self.face_detector(img, return_prob=True)
 
-            emb = self.face_feature_extractor(
-                face.unsqueeze(0).to(self.device)
-            )
-            emb = np.squeeze(emb.to('cpu').detach().numpy())
-            np_emb.append(emb)
-            np_lb.append(lb)
+            if face is not None and prob >= self.face_threshold:
+                emb = self.face_feature_extractor(
+                    face.unsqueeze(0).to(self.device)
+                )
+                emb = np.squeeze(emb.to('cpu').detach().numpy())
+                np_emb.append(emb)
+                np_lb.append(lb)
 
         np_emb = np.asarray(np_emb)
         np_lb = np.asarray(np_lb)
@@ -163,7 +166,7 @@ class DatasetFromNumpy(Dataset):
         emb = self.np_emb[idx]
         label = self.np_lb[idx]
 
-        return (emb, label)
+        return emb, label
 
 
 def buildDataLoaders(
@@ -210,9 +213,6 @@ def buildDataLoaders(
         "val": val_dataloader,
         "test": test_dataloader,
     }
-    # dataset_sizes = {"train": train_size,
-    #                  "val": val_size,
-    #                  "test": test_size}
 
     return dataloaders
 
@@ -231,8 +231,11 @@ def saveDataloaders(source_folder, save_folder,  dataloaders):
         print(f'saved in {path}')
 
 
-def loadNumpy(source_path, file_name):
+def loadNumpy(source_folder, save_folder, file_name):
+    source_path = './'+source_folder
+    source_path = os.path.join(source_path, save_folder)
     path = os.path.join(source_path, file_name)
+
     print(f'loading from {path}')
 
     try:
@@ -257,10 +260,12 @@ def saveNumpy(numpy, source_path, file_name):
         print(f'saving numpy failed !')
 
 
-def splitNumpy(numpy, ratio_train_data, ratio_val_data,
-               source_path, file_name):
+def filterNumpy(data: np.ndarray, labels: np.ndarray, selected_labels: list):
+    mask = [True if label in selected_labels else False for label in labels]
+    data_ = data[mask, :]
+    labels_ = labels[mask]
 
-    dataset_size = numpy.shape[0]
-    train_size = int(dataset_size * ratio_train_data)
-    val_size = int(dataset_size * ratio_val_data)
-    test_size = dataset_size - train_size - val_size
+    print(f'converted from {data.shape} to {data_.shape}')
+    print(f'converted from {labels_.shape} to {labels_.shape}')
+
+    return data_, labels_

@@ -138,5 +138,5 @@ dmypy.json
 # CUSTOM IGNORED
 runs/
 /external_library/facenet_pytorch/
-source/*
+raw/*
 !*.npy

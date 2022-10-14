@@ -10,7 +10,8 @@ from external_library import MTCNN
 
 
 def macro_evaluation(preds_list, labels_list):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cpu")
 
     torch_preds = torch.Tensor(preds_list).int().to(device)
     torch_labels = torch.Tensor(labels_list).int().to(device)
@@ -39,67 +40,73 @@ def macro_evaluation(preds_list, labels_list):
     return recall, precision
 
 
-def control_threshold(
+def calculate_acc_threshold(
         labels: np.ndarray,
         preds: np.ndarray,
         dists: np.ndarray,
-        threshold=0.5,
-        isCosSimilarity=True
-        ):
-    
-    # TODO pass dist avg
-    corrections = np.where(labels == preds, 1, 0)
+        threshold=0.9,
+        isCosSimilarity=False
+):
+    # batch_size = len(labels)
+    # CONST = 1e-4
+
+    corr = np.where(labels == preds, 1, 0)
+    # print(f'{corr} corr')
     if isCosSimilarity:
         thr_condition = (dists >= threshold)
     else:
         thr_condition = (dists <= threshold)
-    threshold_mask = np.where(thr_condition, 1, 0)
-    acc = corrections.sum()
-    acc_threshold = np.where((corrections == 1) 
-                             & 
-                             (threshold_mask == 1), 1, 0).sum()
-    
-    return acc, acc_threshold   
+    mask = np.where(thr_condition, 1, 0)
+    # print(f'{mask} thre')
+
+    # acc = (corr.sum() + CONST)/batch_size
+    acc = corr.sum()
+
+    # condition = (corr==1) & (mask==1)
+    condition = (corr == 1) | (mask == 0)
+    thr_corr = np.where(condition, 1, 0)
+    # print(f'{thr_corr} thr_corr')
+
+    # thr_acc = (thr_corr.sum() + CONST)/batch_size
+    thr_acc = thr_corr.sum()
+
+    return acc, thr_acc
 
 
-def runner_dist(model, phases, dataloaders, num_epochs=1,
-                threshold=0.5, isCosSimilarity=True):
+def runner_dist(model, phase, dataloaders):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    for epoch in range(num_epochs):
-        print(f"Epoch {epoch}/{num_epochs - 1}")
-        for phase in phases:
-            dataset_size = len(dataloaders[phase].dataset)
-            print(f'[{phase}] dataset size: {dataset_size}')
-            total_acc = 0
-            total_acc_thr = 0
-            
-            for i, (embs, labels) in enumerate(dataloaders[phase]):
-                embs = embs.to(device)
-                labels = labels.to(device)
-                preds, dists = model.forward(embs)
-                # print(f'labels: {labels.numpy()} {labels.numpy().shape}')
-                # print(f'preds: {preds.numpy()} {preds.numpy().shape}')
-                print(f'dists: {dists.numpy()} {dists.numpy().shape}')
-                acc, acc_thr = control_threshold(
-                    labels=labels.numpy(),
-                    preds=preds.numpy(),
-                    dists=dists.numpy(),
-                    threshold=threshold,
-                    isCosSimilarity=True
-                )
-                
-                total_acc += acc
-                total_acc_thr += acc_thr
-            
-            total_acc = total_acc / dataset_size
-            total_acc_thr = total_acc_thr / dataset_size
-            
-            print(f'[{phase}] total_acc: {total_acc:4f}\
-                  total_acc_thr: {total_acc_thr:4f}')
-            
-                
-                
+    dataset_size = len(dataloaders[phase].dataset)
+    print(f'[{phase}] dataset size: {dataset_size}')
+
+    labels_np = []
+    preds_np = []
+    dists_np = []
+    for i, (embs, labels) in enumerate(dataloaders[phase]):
+        print(f'[{i:4}] executing....')
+        embs = embs.to(device)
+        labels = labels.to(device)
+        preds, dists = model.forward(embs)
+
+        labels = labels.cpu().numpy()
+        preds = preds.cpu().numpy()
+        dists = np.round(dists.cpu().numpy(), 4)
+
+        if i % 15 == 0:
+            print('='*60)
+            print(labels, 'labels')
+            print(preds, 'preds')
+            print(dists, 'dists')
+
+        labels_np += labels.tolist()
+        preds_np += preds.tolist()
+        dists_np += dists.tolist()
+
+    labels_np = np.asarray(labels_np)
+    preds_np = np.asarray(preds_np)
+    dists_np = np.asarray(dists_np)
+
+    return labels_np, preds_np, dists_np
 
 
 def runner(
