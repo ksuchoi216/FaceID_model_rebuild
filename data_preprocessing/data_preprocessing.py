@@ -346,7 +346,7 @@ def buildMultipleDataLoaders(
 
     dataloaders = {}
     for phase, data in dict_data.items():
-        print(f'[{phase}]')
+        print(f'[{phase}] labels: {set(data[1])}')
         dataset = DatasetFromNumpy(data[0], data[1])
         dataloader = DataLoader(
             dataset,
@@ -357,3 +357,22 @@ def buildMultipleDataLoaders(
         dataloaders[phase] = dataloader
 
     return dataloaders
+
+
+def convertLabels(
+    labels: np.ndarray,
+    selected_labels: list,
+    marked_label: int,
+    unmarked_label: int
+):
+    s_lbs = selected_labels
+    m_lb = marked_label
+    unm_lb = unmarked_label
+
+    res = [m_lb if lb in s_lbs else unm_lb for lb in labels]
+    res = np.asarray(res)
+    num_m_lb = np.where(res == m_lb, 1, 0).sum()
+    num_unm_lb = np.where(res == unm_lb, 1, 0).sum()
+
+    print(f'num_m_lb = {num_m_lb}, num_unm_lb = {num_unm_lb} set: {set(res)}')
+    return res
