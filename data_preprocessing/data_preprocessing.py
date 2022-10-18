@@ -4,6 +4,8 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import pandas as pd
+
+from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision import datasets, transforms
@@ -12,9 +14,7 @@ from external_library import InceptionResnetV1, MTCNN
 
 
 class FolderDataset():
-    def __init__(self, cfg, face_threshold=0.5):
-        self.face_threshold = face_threshold
-        print(f'face_threshold: {face_threshold}')
+    def __init__(self, cfg):
         self.cfg_for_DatasetFromNumpy = cfg["DatasetFromNumpy"]
 
         pretrained = cfg["pretrained"]
@@ -170,15 +170,17 @@ class DatasetFromNumpy(Dataset):
 
 
 def buildDataLoaders(
-    dataset,
-    batch_size,
-    ratio_train_data=0.8,
-    ratio_val_data=0.2
+    data: np.ndarray,
+    labels: np.ndarray,
+    batch_size: int,
+    ratio_train=0.8,
+    ratio_val=0.2
 ):
+    dataset = DatasetFromNumpy(data, labels)
 
     dataset_size = len(dataset)
-    train_size = int(dataset_size * ratio_train_data)
-    val_size = int(dataset_size * ratio_val_data)
+    train_size = int(dataset_size * ratio_train)
+    val_size = int(dataset_size * ratio_val)
     test_size = dataset_size - train_size - val_size
 
     print(
@@ -265,7 +267,93 @@ def filterNumpy(data: np.ndarray, labels: np.ndarray, selected_labels: list):
     data_ = data[mask, :]
     labels_ = labels[mask]
 
+    print('\n')
+    print('[FilterNumpy]')
     print(f'converted from {data.shape} to {data_.shape}')
     print(f'converted from {labels_.shape} to {labels_.shape}')
 
     return data_, labels_
+
+
+def splitNumpy(data: np.ndarray, labels: np.ndarray, ratios: dict):
+    res = {}
+    print('\n')
+    print('[splitNumpy]')
+    if 'train' in ratios:
+        remain_size = round(1-ratios['train'], 2)
+        test_size = round(ratios['test']/remain_size, 2)
+        print(f'[train exist] Ratios: remain {remain_size} test {test_size}')
+        X_train, X_remain, y_train, y_remain = train_test_split(
+            data,
+            labels,
+            test_size=remain_size
+        )
+
+        X_val, X_test, y_val, y_test = train_test_split(
+            X_remain,
+            y_remain,
+            test_size=test_size
+        )
+
+        res['train'] = [X_train, y_train]
+        res['val'] = [X_val, y_val]
+        res['test'] = [X_test, y_test]
+    else:
+        print('[no train exist] There is no train ratio in ratios')
+        X_val, X_test, y_val, y_test = train_test_split(
+            data,
+            labels,
+            test_size=ratios['test']
+        )
+        res['val'] = [X_val, y_val]
+        res['test'] = [X_test, y_test]
+
+    print(res.keys())
+    return res
+
+
+def putTogetherData(data_a: dict, data_b: dict):
+    phases = ['train', 'val', 'test']
+    res = {}
+
+    for phase in phases:
+        res[phase] = [0]*2
+        if phase in data_a and phase in data_b:
+            res[phase][0] = np.vstack((data_a[phase][0], data_b[phase][0]))
+            res[phase][1] = np.hstack((data_a[phase][1], data_b[phase][1]))
+        elif phase in data_a:
+            res[phase][0] = data_a[phase][0]
+            res[phase][1] = data_a[phase][1]
+        else:
+            res[phase][0] = data_b[phase][0]
+            res[phase][1] = data_b[phase][1]
+
+    print('\n')
+    print('[putTogether]')
+    print(res.keys())
+    print(res["train"][0].shape, res["train"][1].shape)
+    print(res["val"][0].shape, res["val"][1].shape)
+    print(res["test"][0].shape, res["test"][1].shape)
+    return res
+
+
+def buildMultipleDataLoaders(
+    dict_data: dict,
+    batch_size: int
+):
+    print('\n')
+    print('[Build dataloaders]')
+
+    dataloaders = {}
+    for phase, data in dict_data.items():
+        print(f'[{phase}]')
+        dataset = DatasetFromNumpy(data[0], data[1])
+        dataloader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=True,
+        )
+
+        dataloaders[phase] = dataloader
+
+    return dataloaders
